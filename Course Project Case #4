@@ -1,0 +1,147 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+using namespace std;
+
+// Function prototypes
+void shuffleDeck(vector<int>& deck);
+int calculateHandValue(const vector<int>& hand);
+void displayHand(const vector<int>& hand, bool hideFirstCard = false);
+char getPlayerChoice();
+bool isBlackjack(const vector<int>& hand);
+bool checkBust(const vector<int>& hand);
+
+int main() {
+    srand(time(0));
+
+    // Initialize game variables
+    vector<int> deck(52);
+    for (int i = 0; i < 52; ++i) deck[i] = i;
+    shuffleDeck(deck);
+
+    int balance = 1000; // Initial player balance
+    int bet;
+    char playAgain = 'y';
+
+    while (playAgain == 'y' && balance > 0) {
+        vector<int> playerHand, dealerHand;
+        bet = 100; // Default bet
+        cout << "Your balance: $" << balance << "\nPlace your bet: ";
+        cin >> bet;
+
+        // Deal initial hands
+        playerHand.push_back(deck.back()); deck.pop_back();
+        dealerHand.push_back(deck.back()); deck.pop_back();
+        playerHand.push_back(deck.back()); deck.pop_back();
+        dealerHand.push_back(deck.back()); deck.pop_back();
+
+        // Display hands
+        cout << "\nYour hand: ";
+        displayHand(playerHand);
+        cout << "\nDealer's hand: ";
+        displayHand(dealerHand, true);
+
+        // Check for Blackjack
+        if (isBlackjack(playerHand)) {
+            cout << "\nBlackjack! You win!\n";
+            balance += bet * 1.5;
+            continue;
+        }
+
+        // Player's turn
+        char choice;
+        do {
+            choice = getPlayerChoice();
+            if (choice == 'h') {
+                playerHand.push_back(deck.back());
+                deck.pop_back();
+                cout << "Your hand: ";
+                displayHand(playerHand);
+            }
+        } while (choice == 'h' && !checkBust(playerHand));
+
+        if (checkBust(playerHand)) {
+            cout << "You bust! Dealer wins.\n";
+            balance -= bet;
+            continue;
+        }
+
+        // Dealer's turn
+        cout << "\nDealer's hand: ";
+        displayHand(dealerHand);
+        while (calculateHandValue(dealerHand) <= 16) {
+            dealerHand.push_back(deck.back());
+            deck.pop_back();
+        }
+        cout << "Dealer's final hand: ";
+        displayHand(dealerHand);
+
+        // Determine winner
+        int playerTotal = calculateHandValue(playerHand);
+        int dealerTotal = calculateHandValue(dealerHand);
+        if (checkBust(dealerHand) || playerTotal > dealerTotal) {
+            cout << "You win!\n";
+            balance += bet;
+        } else if (dealerTotal > playerTotal) {
+            cout << "Dealer wins!\n";
+            balance -= bet;
+        } else {
+            cout << "Push. Bet returned.\n";
+        }
+
+        // Ask to play again
+        cout << "Play again? (y/n): ";
+        cin >> playAgain;
+    }
+
+    cout << "Game over. Your final balance: $" << balance << endl;
+    return 0;
+}
+
+// Function definitions
+
+void shuffleDeck(vector<int>& deck) {
+    for (int i = 0; i < deck.size(); ++i) {
+        int randIdx = rand() % deck.size();
+        swap(deck[i], deck[randIdx]);
+    }
+}
+
+int calculateHandValue(const vector<int>& hand) {
+    int total = 0, aces = 0;
+    for (int card : hand) {
+        int value = card % 13 + 1;
+        if (value > 10) value = 10;
+        if (value == 1) ++aces;
+        total += value;
+    }
+    while (aces > 0 && total + 10 <= 21) {
+        total += 10;
+        --aces;
+    }
+    return total;
+}
+
+void displayHand(const vector<int>& hand, bool hideFirstCard) {
+    for (size_t i = 0; i < hand.size(); ++i) {
+        if (i == 0 && hideFirstCard) cout << "[Hidden] ";
+        else cout << hand[i] % 13 + 1 << " ";
+    }
+    cout << endl;
+}
+
+char getPlayerChoice() {
+    char choice;
+    cout << "Choose action: Hit (h), Stand (s): ";
+    cin >> choice;
+    return choice;
+}
+
+bool isBlackjack(const vector<int>& hand) {
+    return hand.size() == 2 && calculateHandValue(hand) == 21;
+}
+
+bool checkBust(const vector<int>& hand) {
+    return calculateHandValue(hand) > 21;
+}
